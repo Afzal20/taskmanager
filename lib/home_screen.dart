@@ -15,6 +15,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _activeNav = 0;
 
+  // Live clock
+  late String _currentTime;
+  late Timer _clockTimer;
+
+  String _formatTime(DateTime t) {
+    final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final minute = t.minute.toString().padLeft(2, '0');
+    final period = t.hour < 12 ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
+
   // Battery
   final Battery _battery = Battery();
   int _batteryLevel = 100;
@@ -24,6 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Live clock — update every second
+    _currentTime = _formatTime(DateTime.now());
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _currentTime = _formatTime(DateTime.now()));
+    });
     // Get initial battery level
     _battery.batteryLevel.then((level) {
       if (mounted) setState(() => _batteryLevel = level);
@@ -42,13 +58,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _clockTimer.cancel();
     _batterySubscription.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -62,9 +78,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '9:41',
-                    style: TextStyle(
+                  Text(
+                    _currentTime,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -136,7 +152,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-
 
       // Bottom Navigation
       bottomNavigationBar: _buildBottomNavigationBar(context),
@@ -454,7 +469,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              child: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
           ),
           // Calendar
@@ -465,7 +484,9 @@ class _HomeScreenState extends State<HomeScreen> {
             () {
               setState(() => _activeNav = 2);
               Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const CalendarScreen()))
+                  .push(
+                    MaterialPageRoute(builder: (_) => const CalendarScreen()),
+                  )
                   .then((_) => setState(() => _activeNav = 0));
             },
           ),

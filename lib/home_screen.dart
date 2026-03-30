@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'models/task.dart';
 import 'add_task_screen.dart';
 import 'calendar_screen.dart';
+import 'package:battery_plus/battery_plus.dart';
+import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,8 +15,40 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _activeNav = 0;
 
+  // Battery
+  final Battery _battery = Battery();
+  int _batteryLevel = 100;
+  bool _isCharging = false;
+  late StreamSubscription<BatteryState> _batterySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Get initial battery level
+    _battery.batteryLevel.then((level) {
+      if (mounted) setState(() => _batteryLevel = level);
+    });
+    // Listen for charging state changes
+    _batterySubscription = _battery.onBatteryStateChanged.listen((state) {
+      if (mounted) {
+        setState(() => _isCharging = state == BatteryState.charging);
+        // Refresh level whenever state changes
+        _battery.batteryLevel.then((level) {
+          if (mounted) setState(() => _batteryLevel = level);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _batterySubscription.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -45,13 +79,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       Icon(Icons.more_horiz, color: Colors.white, size: 24),
                     ],
                   ),
-                  const Text(
-                    '88%',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                  Row(
+                    children: [
+                      if (_isCharging)
+                        const Icon(
+                          Icons.bolt,
+                          color: Color(0xFFFFD93D),
+                          size: 16,
+                        ),
+                      Text(
+                        '$_batteryLevel%',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

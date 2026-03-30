@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:taskmanager/splash_screen.dart';
 
 void main() {
@@ -11,12 +12,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Task Manager',
+      title: 'Taskly',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF1E1E2C),
+        scaffoldBackgroundColor: const Color(0xFF0F0E17),
         useMaterial3: true,
+        // Use Nunito for Latin text; Bengali glyphs fall back to Noto Sans Bengali
+        textTheme: GoogleFonts.nunitoTextTheme(
+          ThemeData.dark().textTheme,
+        ),
       ),
       home: const SplashScreen(),
     );

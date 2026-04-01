@@ -40,12 +40,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
   };
 
   static const List<String> _monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   static const List<String> _shortMonths = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -76,14 +96,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  int get _daysInMonth =>
-      DateTime(_currentYear, _currentMonth + 2, 0).day;
+  int get _daysInMonth => DateTime(_currentYear, _currentMonth + 2, 0).day;
 
   int get _firstWeekday =>
       DateTime(_currentYear, _currentMonth + 1, 1).weekday % 7; // Sun=0
 
-  int get _daysInPrevMonth =>
-      DateTime(_currentYear, _currentMonth + 1, 0).day;
+  int get _daysInPrevMonth => DateTime(_currentYear, _currentMonth + 1, 0).day;
 
   @override
   Widget build(BuildContext context) {
@@ -110,8 +128,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFF2A2840)),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 16),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -157,19 +178,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     // Weekday headers
                     Row(
                       children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-                          .map((d) => Expanded(
-                                child: Center(
-                                  child: Text(
-                                    d,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF444466),
-                                      letterSpacing: 0.5,
-                                    ),
+                          .map(
+                            (d) => Expanded(
+                              child: Center(
+                                child: Text(
+                                  d,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF444466),
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
-                              ))
+                              ),
+                            ),
+                          )
                           .toList(),
                     ),
 
@@ -181,20 +204,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                        mainAxisSpacing: 3,
-                        crossAxisSpacing: 3,
-                        childAspectRatio: 1,
-                      ),
+                            crossAxisCount: 7,
+                            mainAxisSpacing: 3,
+                            crossAxisSpacing: 3,
+                            childAspectRatio: 1,
+                          ),
                       itemCount: _firstWeekday + _daysInMonth,
                       itemBuilder: (_, index) {
                         if (index < _firstWeekday) {
                           // Previous month days
-                          final d = _daysInPrevMonth - _firstWeekday + index + 1;
+                          final d =
+                              _daysInPrevMonth - _firstWeekday + index + 1;
                           return _calDay(d, isOtherMonth: true);
                         }
                         final day = index - _firstWeekday + 1;
-                        final isToday = today.year == _currentYear &&
+                        final isToday =
+                            today.year == _currentYear &&
                             today.month == _currentMonth + 1 &&
                             today.day == day;
                         final isSelected = day == _selectedDay;
@@ -227,9 +252,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
+                            horizontal: 10,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4D96FF22),
+                            color: const Color(0xff4d96ff22),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -316,9 +343,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       textColor = Colors.white;
     } else if (isToday) {
       decoration = BoxDecoration(
-        color: const Color(0xFF4D96FF22),
+        color: const Color(0xff4d96ff22),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF4D96FF44), width: 1.5),
+        border: Border.all(color: const Color(0xff4d96ff44), width: 1.5),
       );
       textColor = const Color(0xFF4D96FF);
     }
@@ -350,8 +377,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       color: isSelected
                           ? Colors.white
                           : (taskCount > 1
-                              ? const Color(0xFFFF6B6B)
-                              : const Color(0xFF4D96FF)),
+                                ? const Color(0xFFFF6B6B)
+                                : const Color(0xFF4D96FF)),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -371,9 +398,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(14),
-          border: Border(
-            left: BorderSide(color: task.color, width: 3),
-          ),
+          border: Border(left: BorderSide(color: task.color, width: 3)),
         ),
         child: Row(
           children: [
@@ -410,8 +435,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right,
-                color: Colors.white.withOpacity(0.2), size: 18),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.white.withOpacity(0.2),
+              size: 18,
+            ),
           ],
         ),
       ),

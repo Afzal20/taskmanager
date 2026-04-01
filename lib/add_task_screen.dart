@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'models/task.dart';
+import 'helpers/database_helper.dart';
 
 class AddTaskScreen extends StatefulWidget {
   final VoidCallback? onTaskAdded;
@@ -47,21 +49,36 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return days[d.weekday % 7];
   }
 
-  void _saveTask() {
+  Future<void> _saveTask() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Task title দাও! 😅'),
           backgroundColor: _colorOptions[_selectedColor],
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
     }
-    widget.onTaskAdded?.call();
-    Navigator.of(context).pop();
+
+    final newTask = Task(
+      title: _titleController.text.trim(),
+      description: _descController.text.trim(),
+      colorValue: _colorOptions[_selectedColor].value,
+      priority: _selectedPriority,
+      createTime: DateTime.now().toIso8601String(),
+      dueDate: _dates[_selectedDateOffset].toIso8601String(),
+    );
+
+    await DatabaseHelper.instance.insertTask(newTask);
+
+    if (mounted) {
+      widget.onTaskAdded?.call();
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -84,11 +101,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: const Color(0xFF2A2840)),
+                        border: Border.all(color: const Color(0xFF2A2840)),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 16),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -154,8 +173,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                               ),
                             ),
                             child: selected
-                                ? const Icon(Icons.check,
-                                    color: Colors.white, size: 16)
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  )
                                 : null,
                           ),
                         );
@@ -172,9 +194,16 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         _buildPriorityBtn(0, '🟢 Low', const Color(0xFF6BCB77)),
                         const SizedBox(width: 8),
                         _buildPriorityBtn(
-                            1, '🟡 Medium', const Color(0xFFFFD93D)),
+                          1,
+                          '🟡 Medium',
+                          const Color(0xFFFFD93D),
+                        ),
                         const SizedBox(width: 8),
-                        _buildPriorityBtn(2, '🔴 High', const Color(0xFFFF6B6B)),
+                        _buildPriorityBtn(
+                          2,
+                          '🔴 High',
+                          const Color(0xFFFF6B6B),
+                        ),
                       ],
                     ),
 
@@ -184,63 +213,63 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     _buildFieldLabel('Due date'),
                     const SizedBox(height: 10),
                     Row(
-                      children: List.generate(
-                        _dates.length,
-                        (i) {
-                          final date = _dates[i];
-                          final selected = _selectedDateOffset == i;
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _selectedDateOffset = i),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                margin: EdgeInsets.only(
-                                    right: i < _dates.length - 1 ? 8 : 0),
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 12, horizontal: 4),
-                                decoration: BoxDecoration(
+                      children: List.generate(_dates.length, (i) {
+                        final date = _dates[i];
+                        final selected = _selectedDateOffset == i;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () =>
+                                setState(() => _selectedDateOffset = i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              margin: EdgeInsets.only(
+                                right: i < _dates.length - 1 ? 8 : 0,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? const Color(0xff4d96ff18)
+                                    : const Color(0xFF1A1A2E),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
                                   color: selected
-                                      ? const Color(0xFF4D96FF18)
-                                      : const Color(0xFF1A1A2E),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: selected
-                                        ? const Color(0xFF4D96FF)
-                                        : const Color(0xFF2A2840),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      _dayLabel(date),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.5,
-                                        color: selected
-                                            ? const Color(0xFF4D96FF)
-                                            : const Color(0xFF666680),
-                                      ),
-                                    ),
-                                    Text(
-                                      '${date.day}',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        color: selected
-                                            ? const Color(0xFF4D96FF)
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                  ],
+                                      ? const Color(0xFF4D96FF)
+                                      : const Color(0xFF2A2840),
+                                  width: 2,
                                 ),
                               ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _dayLabel(date),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                      color: selected
+                                          ? const Color(0xFF4D96FF)
+                                          : const Color(0xFF666680),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${date.day}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: selected
+                                          ? const Color(0xFF4D96FF)
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      }),
                     ),
 
                     const SizedBox(height: 28),
@@ -259,8 +288,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                           borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  const Color(0xFF6BCB77).withOpacity(0.35),
+                              color: const Color(0xFF6BCB77).withOpacity(0.35),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
@@ -308,8 +336,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController ctrl, String hint,
-      {int maxLines = 1}) {
+  Widget _buildTextField(
+    TextEditingController ctrl,
+    String hint, {
+    int maxLines = 1,
+  }) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
@@ -335,8 +366,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFF4D96FF), width: 2),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 13,
+        ),
       ),
     );
   }
@@ -350,7 +383,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? activeColor.withOpacity(0.1) : const Color(0xFF1A1A2E),
+            color: selected
+                ? activeColor.withOpacity(0.1)
+                : const Color(0xFF1A1A2E),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? activeColor : const Color(0xFF2A2840),

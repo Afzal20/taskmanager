@@ -11,8 +11,10 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
-  final List<TextEditingController> _pinControllers =
-      List.generate(4, (_) => TextEditingController());
+  final List<TextEditingController> _pinControllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _pinFocusNodes = List.generate(4, (_) => FocusNode());
   int _selectedAvatar = 0;
   bool _isLoading = false;
@@ -153,11 +155,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFF2A2840), width: 2),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2A2840),
+                      width: 2,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFF4D96FF), width: 2),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF4D96FF),
+                      width: 2,
+                    ),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 18,
@@ -183,7 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       height: 52,
                       decoration: BoxDecoration(
                         color: _selectedAvatar == i
-                            ? const Color(0xFF4D96FF18)
+                            ? const Color(0xff4d96ff18)
                             : const Color(0xFF1A1A2E),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
@@ -234,21 +242,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           fillColor: const Color(0xFF1A1A2E),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF2A2840)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2A2840),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: const BorderSide(
-                                color: Color(0xFF2A2840), width: 2),
+                              color: Color(0xFF2A2840),
+                              width: 2,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: const BorderSide(
-                                color: Color(0xFF4D96FF), width: 2),
+                              color: Color(0xFF4D96FF),
+                              width: 2,
+                            ),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 8),
+                            vertical: 14,
+                            horizontal: 8,
+                          ),
                         ),
                         onChanged: (val) {
                           if (val.isNotEmpty && i < 3) {

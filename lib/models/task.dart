@@ -1,34 +1,49 @@
-import 'package:flutter/material.dart';
-
-enum TaskCategory {
-  work('WORK', const Color(0xFF3B82F6)),
-  design('DESIGN', const Color(0xFFEAB308)),
-  personal('PERSONAL', const Color(0xFF10B981)),
-  urgent('URGENT', const Color(0xFFEF4444));
-
-  const TaskCategory(this.label, this.color);
-  final String label;
-  final Color color;
-}
-
 class Task {
-  final String id;
+  final int? id;
   final String title;
   final String description;
-  final TaskCategory category;
-  final double progress;
-  final String time;
-  final bool hasAiBadge;
+  final int colorValue;
+  final int priority;
+  final String createTime;
+  final String dueDate;
+  final int isDone;
 
   Task({
-    required this.id,
+    this.id,
     required this.title,
     required this.description,
-    required this.category,
-    required this.progress,
-    required this.time,
-    this.hasAiBadge = false,
+    required this.colorValue,
+    required this.priority,
+    required this.createTime,
+    required this.dueDate,
+    this.isDone = 0,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) 'id': id,
+      'title': title,
+      'description': description,
+      'colorValue': colorValue,
+      'priority': priority,
+      'createTime': createTime,
+      'dueDate': dueDate,
+      'isDone': isDone,
+    };
+  }
+
+  factory Task.fromMap(Map<String, dynamic> map) {
+    return Task(
+      id: map['id'],
+      title: map['title'],
+      description: map['description'],
+      colorValue: map['colorValue'],
+      priority: map['priority'],
+      createTime: map['createTime'],
+      dueDate: map['dueDate'],
+      isDone: map['isDone'],
+    );
+  }
 }
 
 class TaskStats {

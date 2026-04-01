@@ -4,6 +4,7 @@ import 'add_task_screen.dart';
 import 'calendar_screen.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'dart:async';
+import 'helpers/database_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _activeNav = 0;
+  List<Task> _tasks = [];
+  bool _isLoading = true;
 
   // Live clock
   late String _currentTime;
@@ -35,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadTasks();
     // Live clock — update every second
     _currentTime = _formatTime(DateTime.now());
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -54,6 +58,16 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     });
+  }
+
+  Future<void> _loadTasks() async {
+    final tasks = await DatabaseHelper.instance.getTasks();
+    if (mounted) {
+      setState(() {
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -179,22 +193,27 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'তোমার ৫টা task আজকে শেষ করতে হবে',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+        Text(
+          'তোমার ${_tasks.length}টা task আজকে শেষ করতে হবে',
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
         ),
       ],
     );
   }
 
   Widget _buildTaskStatsCards() {
+    final total = _tasks.length;
+    final done = _tasks.where((t) => t.isDone == 1).length;
+    final todayStr = DateTime.now().toIso8601String().split('T')[0];
+    final todayCount = _tasks.where((t) => t.dueDate.startsWith(todayStr)).length;
+
     return Row(
       children: [
-        Expanded(child: _buildStatCard('Total', '8', const Color(0xFFEF4444))),
+        Expanded(child: _buildStatCard('Total', '$total', const Color(0xFFEF4444))),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Today', '3', const Color(0xFFEAB308))),
+        Expanded(child: _buildStatCard('Today', '$todayCount', const Color(0xFFEAB308))),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Done', '5', const Color(0xFF10B981))),
+        Expanded(child: _buildStatCard('Done', '$done', const Color(0xFF10B981))),
       ],
     );
   }
@@ -247,46 +266,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTaskList() {
-    final tasks = [
-      Task(
-        id: '1',
-        title: 'Django project API design করা',
-        description: 'Authentication endpoints + OTP flow',
-        category: TaskCategory.work,
-        progress: 0.7,
-        time: 'আজ ৫:০০ PM',
-        hasAiBadge: true,
-      ),
-      Task(
-        id: '2',
-        title: 'Figma design করা',
-        description: 'Mobile app design for client',
-        category: TaskCategory.design,
-        progress: 0.3,
-        time: 'আজ ৬:০০ PM',
-      ),
-      Task(
-        id: '3',
-        title: 'Gym যাওয়া',
-        description: 'Chest + Triceps workout',
-        category: TaskCategory.personal,
-        progress: 0.0,
-        time: 'আজ ৭:০০ PM',
-      ),
-      Task(
-        id: '4',
-        title: 'Client meeting',
-        description: 'Project discussion and feedback',
-        category: TaskCategory.urgent,
-        progress: 0.5,
-        time: 'আজ ৮:০০ PM',
-      ),
-    ];
-
-    return Column(children: tasks.map((task) => _buildTaskCard(task)).toList());
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_tasks.isEmpty) {
+      return const Center(
+        child: Text(
+          'No tasks yet! Add one above.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+    return Column(children: _tasks.map((task) => _buildTaskCard(task)).toList());
   }
 
   Widget _buildTaskCard(Task task) {
+    final taskColor = Color(task.colorValue);
+    final priorityLabels = ['Low', 'Medium', 'High'];
+    final priorityLabel = priorityLabels[task.priority];
+    final dateStr = task.dueDate.split('T').first;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -303,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: task.category.color,
+                  color: taskColor,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -320,46 +319,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      task.description,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
+                    if (task.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        task.description,
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              if (task.hasAiBadge)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'AI',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
 
-          const SizedBox(height: 12),
-
-          // Progress Bar
-          LinearProgressIndicator(
-            value: task.progress,
-            backgroundColor: const Color(0xFF1E1E2C),
-            valueColor: AlwaysStoppedAnimation<Color>(task.category.color),
-          ),
-
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -370,13 +343,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: task.category.color.withOpacity(0.2),
+                  color: taskColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  task.category.label,
+                  priorityLabel,
                   style: TextStyle(
-                    color: task.category.color,
+                    color: taskColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -388,7 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Icon(Icons.access_time, color: Colors.grey, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    task.time,
+                    dateStr,
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(width: 12),
@@ -396,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: task.category.color,
+                      color: taskColor,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -436,6 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(
                   builder: (_) => AddTaskScreen(
                     onTaskAdded: () {
+                      _loadTasks();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: const Text('Task added! 🎉'),

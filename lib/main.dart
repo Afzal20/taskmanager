@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:taskmanager/splash_screen.dart';
+import 'package:flutter/services.dart';
+
+import 'core/app_theme.dart';
+import 'splash_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: AppColors.background,
+    ),
+  );
   runApp(const MyApp());
 }
 
@@ -14,15 +24,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Taskly',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F0E17),
-        useMaterial3: true,
-        // Use Nunito for Latin text; Bengali glyphs fall back to Noto Sans Bengali
-        textTheme: GoogleFonts.nunitoTextTheme(
-          ThemeData.dark().textTheme,
-        ),
-      ),
+      theme: AppTheme.dark,
       home: const SplashScreen(),
     );
   }

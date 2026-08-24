@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e8e8e8" stroke-width="1"/>
+    </pattern>
+
+    <!-- Outer Frame Gradient -->
+    <linearGradient id="frameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a8cff"/>
+      <stop offset="50%" stop-color="#0066cc"/>
+      <stop offset="100%" stop-color="#1a237e"/>
+    </linearGradient>
+
+    <!-- Checkmark Main Gradient -->
+    <linearGradient id="checkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4da6ff"/>
+      <stop offset="40%" stop-color="#1a8cff"/>
+      <stop offset="100%" stop-color="#0d1b6e"/>
+    </linearGradient>
+
+    <!-- Shadow Gradient -->
+    <linearGradient id="shadowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0d1b6e" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0d1b6e" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d1b6e" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background with Grid -->
+  <rect width="512" height="512" fill="white"/>
+  <rect width="512" height="512" fill="url(#grid)"/>
+
+  <!-- Outer Rounded Rectangle Frame -->
+  <rect x="96" y="64" width="320" height="384" rx="64" ry="64" 
+        fill="none" stroke="url(#frameGrad)" stroke-width="48" 
+        filter="url(#shadow)"/>
+
+  <!-- Checkmark Shadow (offset slightly down) -->
+  <path d="M 120 260 
+           C 140 280, 160 300, 180 320 
+           C 220 360, 260 400, 300 440 
+           C 340 400, 380 360, 420 320 
+           C 400 300, 380 280, 360 260 
+           C 340 280, 320 300, 300 320 
+           C 260 280, 220 240, 180 200 
+           C 160 220, 140 240, 120 260 Z" 
+        fill="url(#shadowGrad)" transform="translate(0, 15)"/>
+
+  <!-- Main Checkmark -->
+  <path d="M 120 240 
+           C 140 260, 160 280, 180 300 
+           C 220 340, 260 380, 300 420 
+           C 340 380, 380 340, 420 300 
+           C 400 280, 380 260, 360 240 
+           C 340 260, 320 280, 300 300 
+           C 260 260, 220 220, 180 180 
+           C 160 200, 140 220, 120 240 Z" 
+        fill="url(#checkGrad)" filter="url(#shadow)"/>
+
+  <!-- Secondary overlapping checkmark layer for depth -->
+  <path d="M 130 245 
+           C 148 263, 166 281, 184 299 
+           C 222 337, 260 375, 298 413 
+           C 336 375, 374 337, 412 299 
+           C 394 281, 376 263, 358 245 
+           C 340 263, 322 281, 304 299 
+           C 266 261, 228 223, 190 185 
+           C 172 205, 154 225, 130 245 Z" 
+        fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+</svg>

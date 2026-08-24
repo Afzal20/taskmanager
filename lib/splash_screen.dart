@@ -61,7 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               ScaleTransition(
                 scale: _scale,
-                child: const BrandMark(size: 84),
+                child: const BrandLogo(size: 96),
               ),
               const SizedBox(height: 24),
               RichText(

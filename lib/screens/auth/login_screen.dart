@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_theme.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/brand_logo.dart';
 import '../../widgets/common.dart';
 import 'register_screen.dart';
 import '../../home_screen.dart';
@@ -68,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const BrandMark(),
+                  const BrandLogo(size: 76),
                   const SizedBox(height: 28),
                   const Text(
                     'Welcome back',
@@ -142,30 +143,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class BrandMark extends StatelessWidget {
-  final double size;
-
-  const BrandMark({super.key, this.size = 64});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(size * 0.28),
-      ),
-      child: Icon(Icons.task_alt_rounded,
-          color: Colors.white, size: size * 0.5),
     );
   }
 }

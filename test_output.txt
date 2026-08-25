@@ -1,0 +1,57 @@
+Analyzing taskmanager-android...                                
+No issues found! (ran in 1.5s)
+ANALYZE_DONE
+00:00 +0: loading /home/dev-dir/taskmanager-android/test/app_widget_test.dart
+00:00 +0: /home/dev-dir/taskmanager-android/test/widget_test.dart: Task model round-trips through a map
+00:00 +1: /home/dev-dir/taskmanager-android/test/widget_test.dart: Task model isOverdue only for open past-due tasks
+00:00 +2: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Calendar renders weekday headers and reflects a day containing tasks
+00:00 +3: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Calendar renders weekday headers and reflects a day containing tasks
+00:00 +4: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Calendar renders weekday headers and reflects a day containing tasks
+00:00 +5: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Calendar renders weekday headers and reflects a day containing tasks
+00:01 +6: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Task list filters switching Pending/Done chips changes the visible tasks
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +7: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Swipe to delete shows UNDO and restores the row including its original id
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextContainingWidgetFinder:<Found 0 widgets with text containing Deleted: []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///home/dev-dir/taskmanager-android/test/app_widget_test.dart:159:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/dev-dir/taskmanager-android/test/app_widget_test.dart line 159
+The test description was:
+  shows UNDO and restores the row including its original id
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +7 -1: /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Swipe to delete shows UNDO and restores the row including its original id [E]
+  Test failed. See exception logs above.
+  The test description was: shows UNDO and restores the row including its original id
+  
+00:02 +7 -1: Some tests failed.
+
+Failing tests:
+  /home/dev-dir/taskmanager-android/test/app_widget_test.dart: Swipe to delete shows UNDO and restores the row including its original id

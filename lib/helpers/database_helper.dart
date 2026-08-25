@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -22,7 +23,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -55,6 +56,12 @@ CREATE TABLE tasks (
   }
 
   /// Migration from v1 (no auth) to v2: add users table and scope column.
+  ///
+  /// Migration v2 -> v3: passwords are now stored hashed (PBKDF2) instead of
+  /// plaintext. The `password` column type is unchanged (TEXT), so there is no
+  /// schema DDL here. Legacy plaintext rows are intentionally NOT converted
+  /// silently — [AuthService.login] detects them via PasswordHasher.isHashed
+  /// and forces a password-reset flow, which is the safest path for local data.
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('''
@@ -72,6 +79,23 @@ CREATE TABLE IF NOT EXISTS users (
       await db.execute(
         "ALTER TABLE tasks ADD COLUMN userId INTEGER NOT NULL DEFAULT -1",
       );
+    }
+    // oldVersion < 3: no DDL needed; hashing is enforced at the service layer.
+  }
+
+  /// Clears the cached database handle so a fresh one is opened (used by tests).
+  @visibleForTesting
+  static void resetForTesting() {
+    _database = null;
+  }
+
+  /// Closes and clears the cached database handle (used by tests to release the
+  /// file between cases).
+  @visibleForTesting
+  static Future<void> closeForTesting() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
     }
   }
 

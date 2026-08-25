@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:taskmanager/core/date_utils.dart' as du;
-import 'package:taskmanager/models/task.dart';
-import 'package:taskmanager/services/auth_service.dart';
+import 'package:taskly/core/date_utils.dart' as du;
+import 'package:taskly/models/task.dart';
+import 'package:taskly/services/auth_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

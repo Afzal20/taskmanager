@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../../widgets/brand_logo.dart';
 import '../../widgets/common.dart';
 import 'register_screen.dart';
+import 'reset_password_screen.dart';
 import '../../home_screen.dart';
 
 class FadeRoute<T> extends PageRouteBuilder<T> {
@@ -49,6 +50,17 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (!result.success) {
       setState(() => _loading = false);
+      if (result.needsReset) {
+        // Legacy plaintext account — route to the password-reset flow.
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordScreen(
+              initialEmail: _emailController.text.trim(),
+            ),
+          ),
+        );
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.error!), backgroundColor: AppColors.red),
       );

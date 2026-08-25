@@ -1,0 +1,17 @@
+# Copy this file to android/key.properties and fill in your own values.
+# The real key.properties and upload-keystore.jks are gitignored — never commit
+# release credentials. Generate a keystore with:
+#
+#   keytool -genkeypair -v \
+#     -keystore upload-keystore.jks \
+#     -storepass <store-password> \
+#     -keypass <key-password> \
+#     -alias taskly \
+#     -keyalg RSA -keysize 2048 -validity 10000 \
+#     -dname "CN=Your Name, OU=Mobile, O=Taskly, L=City, S=State, C=CC"
+#
+# Note: PKCS12 keystores require storePassword == keyPassword.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=taskly
+storeFile=upload-keystore.jks

@@ -2,17 +2,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/database_helper.dart';
 import '../models/user.dart';
+import 'password_hasher.dart';
 
 /// Result wrapper so screens can show precise error messages.
 class AuthResult {
   final bool success;
   final String? error;
 
-  const AuthResult._(this.success, this.error);
+  /// True when the account is a legacy plaintext one that must set a new
+  /// password (see AuthService.resetPassword) before it can be used.
+  final bool needsReset;
+
+  const AuthResult._(this.success, this.error, {this.needsReset = false});
 
   const AuthResult.ok() : this._(true, null);
   const AuthResult.fail(String message) : this._(false, message);
+  const AuthResult.needsReset()
+      : this._(false, 'This account was created before password hashing. '
+            'Please set a new password to continue.',
+            needsReset: true);
 }
+
 
 class AuthService {
   AuthService._();
@@ -77,7 +87,7 @@ class AuthService {
     final user = User(
       name: name.trim(),
       email: normalizedEmail,
-      password: password,
+      password: PasswordHasher.hash(password),
       avatar: avatar,
       createdAt: DateTime.now().toIso8601String(),
     );
@@ -92,9 +102,46 @@ class AuthService {
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     final user = await DatabaseHelper.instance.findUserByEmail(normalizedEmail);
-    if (user == null || user.password != password) {
+    if (user == null) {
       return const AuthResult.fail('Incorrect email or password.');
     }
+    // Legacy plaintext account — never accept it silently. Force a reset.
+    if (!PasswordHasher.isHashed(user.password)) {
+      return const AuthResult.needsReset();
+    }
+    if (!PasswordHasher.verify(password, user.password)) {
+      return const AuthResult.fail('Incorrect email or password.');
+    }
+    await _startSession(user.id!, user.email);
+    return const AuthResult.ok();
+  }
+
+  /// Sets a new, hashed password for a legacy plaintext account. Only allowed
+  /// while the account still holds an unhashed password, so an already-secured
+  /// account can never be hijacked through this path.
+  Future<AuthResult> resetPassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final user = await DatabaseHelper.instance.findUserByEmail(normalizedEmail);
+    if (user == null) {
+      return const AuthResult.fail('No account found with that email.');
+    }
+    if (PasswordHasher.isHashed(user.password)) {
+      return const AuthResult.fail(
+          'This account already has a secure password. Sign in with it instead.');
+    }
+    await DatabaseHelper.instance.updateUser(
+      User(
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: PasswordHasher.hash(newPassword),
+        avatar: user.avatar,
+        createdAt: user.createdAt,
+      ),
+    );
     await _startSession(user.id!, user.email);
     return const AuthResult.ok();
   }
@@ -109,7 +156,10 @@ class AuthService {
   }) async {
     final user = await currentUser();
     if (user == null) return const AuthResult.fail('Not signed in.');
-    if (user.password != currentPassword) {
+    // If the account somehow still holds a plaintext password (legacy), let the
+    // change proceed so the user can move it to a hash immediately.
+    if (PasswordHasher.isHashed(user.password) &&
+        !PasswordHasher.verify(currentPassword, user.password)) {
       return const AuthResult.fail('Current password is incorrect.');
     }
     await DatabaseHelper.instance.updateUser(
@@ -117,7 +167,7 @@ class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
-        password: newPassword,
+        password: PasswordHasher.hash(newPassword),
         avatar: user.avatar,
         createdAt: user.createdAt,
       ),
@@ -142,5 +192,11 @@ class AuthService {
   /// Clears in-memory session state (used by tests).
   void resetForTesting() {
     _currentUserId = null;
+  }
+
+  /// Injects a logged-in session without a database round-trip (used by widget
+  /// tests so task screens have an authorized user to scope queries against).
+  void setSessionForTesting(int userId, String email) {
+    _currentUserId = userId;
   }
 }

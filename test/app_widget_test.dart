@@ -85,6 +85,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Pumps real time until [condition] holds, giving async work on the
+  /// sqflite_ffi isolate (and any setState it triggers) room to finish
+  /// regardless of host speed. Fails the test after ~5 seconds.
+  Future<void> waitFor(WidgetTester tester, bool Function() condition) async {
+    for (var i = 0; i < 100; i++) {
+      await tester.pumpAndSettle();
+      if (condition()) return;
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+    }
+    fail('Condition not met within timeout');
+  }
+
   group('Calendar', () {
     testWidgets('renders weekday headers and reflects a day containing tasks',
         (tester) async {
@@ -148,10 +161,23 @@ void main() {
       await pumpPage(tester, const TasksPage(), userId: uid);
       expect(find.text('Swipe me'), findsOneWidget);
 
-      // Swipe left to delete.
+      // Swipe left to delete. pumpAndSettle first completes the dismiss +
+      // resize animations, which is what fires onDismissed; only then does the
+      // async delete run, so it needs its own real-async window (runAsync)
+      // afterwards before the snackbar can appear.
       await tester.fling(find.text('Swipe me'), const Offset(-500, 0), 1200);
+      await tester.pumpAndSettle(); // dismiss + resize -> fires onDismissed
+
+      // The delete itself runs asynchronously on the sqflite_ffi isolate;
+      // wait for its confirmation snackbar rather than a fixed delay.
+      await waitFor(tester,
+          () => find.textContaining('Deleted').evaluate().isNotEmpty);
+
+      // Let the page's own post-delete reload finish and render, so the
+      // dismissed Dismissible is fully removed from the tree before UNDO puts
+      // the row (same ValueKey) back.
       await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 150)));
+          () => Future<void>.delayed(const Duration(milliseconds: 200)));
       await tester.pumpAndSettle();
 
       // Deleted row left the list and an UNDO snackbar is showing.
@@ -162,12 +188,12 @@ void main() {
           .runAsync(() => DatabaseHelper.instance.getTasksForUser(uid)))!;
       expect(deleted.where((t) => t.id == taskId), isEmpty);
 
-      // Tapping UNDO restores the exact row, id included.
+      // Tapping UNDO restores the exact row, id included. The restore spans an
+      // insert plus a list reload on the sqflite isolate, so wait for the row
+      // to actually reappear instead of betting on a fixed delay.
       await tester.tap(find.text('UNDO'));
-      await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 150)));
-      await tester.pumpAndSettle();
-      expect(find.text('Swipe me'), findsOneWidget);
+      await waitFor(
+          tester, () => find.text('Swipe me').evaluate().isNotEmpty);
       final tasks = (await tester
           .runAsync(() => DatabaseHelper.instance.getTasksForUser(uid)))!;
       final restored = tasks.where((t) => t.id == taskId).toList();

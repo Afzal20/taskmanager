@@ -84,10 +84,11 @@ class AuthService {
       return const AuthResult.fail(
           'An account with this email already exists.');
     }
+    final hashedPassword = await PasswordHasher.hash(password);
     final user = User(
       name: name.trim(),
       email: normalizedEmail,
-      password: PasswordHasher.hash(password),
+      password: hashedPassword,
       avatar: avatar,
       createdAt: DateTime.now().toIso8601String(),
     );
@@ -109,7 +110,7 @@ class AuthService {
     if (!PasswordHasher.isHashed(user.password)) {
       return const AuthResult.needsReset();
     }
-    if (!PasswordHasher.verify(password, user.password)) {
+    if (!await PasswordHasher.verify(password, user.password)) {
       return const AuthResult.fail('Incorrect email or password.');
     }
     await _startSession(user.id!, user.email);
@@ -132,12 +133,13 @@ class AuthService {
       return const AuthResult.fail(
           'This account already has a secure password. Sign in with it instead.');
     }
+    final hashedPassword = await PasswordHasher.hash(newPassword);
     await DatabaseHelper.instance.updateUser(
       User(
         id: user.id,
         name: user.name,
         email: user.email,
-        password: PasswordHasher.hash(newPassword),
+        password: hashedPassword,
         avatar: user.avatar,
         createdAt: user.createdAt,
       ),
@@ -159,15 +161,16 @@ class AuthService {
     // If the account somehow still holds a plaintext password (legacy), let the
     // change proceed so the user can move it to a hash immediately.
     if (PasswordHasher.isHashed(user.password) &&
-        !PasswordHasher.verify(currentPassword, user.password)) {
+        !await PasswordHasher.verify(currentPassword, user.password)) {
       return const AuthResult.fail('Current password is incorrect.');
     }
+    final hashedPassword = await PasswordHasher.hash(newPassword);
     await DatabaseHelper.instance.updateUser(
       User(
         id: user.id,
         name: user.name,
         email: user.email,
-        password: PasswordHasher.hash(newPassword),
+        password: hashedPassword,
         avatar: user.avatar,
         createdAt: user.createdAt,
       ),

@@ -25,11 +25,6 @@
       <stop offset="0%" stop-color="#0d1b6e" stop-opacity="0.6"/>
       <stop offset="100%" stop-color="#0d1b6e" stop-opacity="0"/>
     </linearGradient>
-
-    <!-- Drop Shadow Filter -->
-    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d1b6e" flood-opacity="0.25"/>
-    </filter>
   </defs>
 
   <!-- Background with Grid -->
@@ -38,8 +33,7 @@
 
   <!-- Outer Rounded Rectangle Frame -->
   <rect x="96" y="64" width="320" height="384" rx="64" ry="64" 
-        fill="none" stroke="url(#frameGrad)" stroke-width="48" 
-        filter="url(#shadow)"/>
+        fill="none" stroke="url(#frameGrad)" stroke-width="48"/>
 
   <!-- Checkmark Shadow (offset slightly down) -->
   <path d="M 120 260 
@@ -61,7 +55,7 @@
            C 340 260, 320 280, 300 300 
            C 260 260, 220 220, 180 180 
            C 160 200, 140 220, 120 240 Z" 
-        fill="url(#checkGrad)" filter="url(#shadow)"/>
+        fill="url(#checkGrad)"/>
 
   <!-- Secondary overlapping checkmark layer for depth -->
   <path d="M 130 245 

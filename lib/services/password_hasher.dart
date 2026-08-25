@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 /// Hashes passwords with PBKDF2-HMAC-SHA256 and stores them in a
 /// self-describing format so the iteration count and salt travel with the hash.
@@ -12,6 +13,11 @@ import 'package:crypto/crypto.dart';
 /// before hashing hold raw plaintext in the `password` column; those are
 /// detected with [isHashed] and forced through a password-reset flow (see
 /// AuthService) rather than being silently migrated.
+///
+/// The 120k-iteration derivation is CPU-bound (hundreds of ms on low-end
+/// phones), so [hash] and [verify] run it on a background isolate via
+/// [compute]. Calling them no longer blocks the UI thread, which previously
+/// froze the app for seconds on every sign-in/register/password change.
 class PasswordHasher {
   PasswordHasher._();
 
@@ -22,19 +28,22 @@ class PasswordHasher {
 
   static final Random _rng = Random.secure();
 
-  /// Hashes [password] with a fresh random salt.
-  static String hash(String password) {
+  /// Hashes [password] with a fresh random salt. Runs on a background isolate.
+  static Future<String> hash(String password) async {
     final saltBytes = List<int>.generate(_saltLength, (_) => _rng.nextInt(256));
     final saltB64 = base64UrlEncode(saltBytes);
-    return _derive(password, saltB64, _iterations);
+    final hash =
+        await compute(_deriveHashOnlyIsolate, (password, saltB64, _iterations));
+    return '$_prefix\$$_iterations\$$saltB64\$$hash';
   }
 
   /// True when [stored] was produced by [hash] (as opposed to a legacy
   /// plaintext value stored before password hashing was introduced).
   static bool isHashed(String stored) => stored.startsWith('$_prefix\$');
 
-  /// Constant-time-ish recompute-and-compare of [password] against [stored].
-  static bool verify(String password, String stored) {
+  /// Recomputes the hash of [password] against [stored] and compares it in
+  /// constant time. Runs on a background isolate.
+  static Future<bool> verify(String password, String stored) async {
     if (!isHashed(stored)) return false;
     final parts = stored.split('\$');
     if (parts.length != 4) return false;
@@ -43,18 +52,22 @@ class PasswordHasher {
     final saltB64 = parts[2];
     final expected = parts[3];
 
-    final actualHash = _deriveHashOnly(password, saltB64, iterations);
+    final actualHash =
+        await compute(_deriveHashOnlyIsolate, (password, saltB64, iterations));
     return _constantTimeEquals(
         base64Url.decode(actualHash), base64Url.decode(expected));
   }
 
-  static String _derive(String password, String saltB64, int iterations) {
-    final hash = _deriveHashOnly(password, saltB64, iterations);
-    return '$_prefix\$$iterations\$$saltB64\$$hash';
+  /// Isolate entry point for [compute]: derives the raw hash for one block of
+  /// the key. Must stay a top-level/static function with serializable args.
+  static String _deriveHashOnlyIsolate((String, String, int) args) {
+    final (password, saltB64, iterations) = args;
+    return _deriveHashOnly(password, saltB64, iterations);
   }
 
   /// PBKDF2-HMAC-SHA256 implemented directly on top of the `crypto` package's
   /// Hmac primitive (package:crypto exposes Hmac but not a stock PBKDF2).
+  /// Pure CPU work with no Flutter dependencies, so it is isolate-safe.
   static String _deriveHashOnly(String password, String saltB64, int iterations) {
     final hmac = Hmac(sha256, utf8.encode(password));
     final salt = base64Url.decode(saltB64);

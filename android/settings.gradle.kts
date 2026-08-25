@@ -20,7 +20,10 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.0.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // Not applied by the app module (AGP built-in Kotlin is used there); this
+    // declaration keeps a modern KGP on the buildscript classpath for plugins
+    // that still need it and satisfies the Flutter tooling version check.
+    id("org.jetbrains.kotlin.android") version "2.3.20" apply false
 }
 
 include(":app")

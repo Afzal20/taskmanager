@@ -1,6 +1,19 @@
-# Taskly
+<div align="center">
+  <h1>Taskly</h1>
+  <p>A local-first, secure task manager for Android built with Flutter.</p>
+</div>
 
-A local-first task manager for Android built with Flutter.
+## Screenshots
+
+<div align="center">
+  <img src="Screenshots/Screenshot_20260831-175039.jpg" width="200" />
+  <img src="Screenshots/Screenshot_20260831-175058.jpg" width="200" />
+  <img src="Screenshots/Screenshot_20260831-175110.jpg" width="200" />
+  <img src="Screenshots/Screenshot_20260831-175116.jpg" width="200" />
+  <img src="Screenshots/Screenshot_20260831-175122.jpg" width="200" />
+  <img src="Screenshots/Screenshot_20260831-175127.jpg" width="200" />
+  <img src="Screenshots/Screenshot_20260831-175138.jpg" width="200" />
+</div>
 
 ## Features
 
@@ -12,26 +25,13 @@ A local-first task manager for Android built with Flutter.
 - **All tasks** — search plus All / Pending / Done / Overdue filters.
 - **Profile** — edit name/avatar, change password, sign out.
 
-## UX details
+## UX Details
 
 - Swipe a task row to delete it, with an UNDO snackbar.
 - Pull-to-refresh on all lists.
 - Inline form validation, password visibility toggles, loading states.
 - Overdue badges, friendly relative dates ("Today", "Tomorrow").
 - Layouts adapt to small screens (compact stat tiles, wrapping chips, scroll-safe forms).
-
-## Tech
-
-| Piece | Where |
-| --- | --- |
-| Theme & design tokens | `lib/core/app_theme.dart` |
-| Date helpers | `lib/core/date_utils.dart` |
-| SQLite schema & migrations (v1→v3) | `lib/helpers/database_helper.dart` |
-| PBKDF2 password hashing | `lib/services/password_hasher.dart` |
-| Auth/session service | `lib/services/auth_service.dart` |
-| User-scoped task repository | `lib/services/task_repository.dart` |
-| App shell (bottom nav + FAB) | `lib/home_screen.dart` |
-| Tabs | `lib/screens/home_page.dart`, `lib/screens/tasks_page.dart`, `lib/calendar_screen.dart`, `lib/screens/profile_page.dart` |
 
 ## Security
 
@@ -55,18 +55,31 @@ Release builds are signed with a local keystore that is **not** committed:
 
 If `android/key.properties` is absent, release builds fall back to the debug signing config so `flutter run --release` still works on a fresh clone.
 
-## Run
+## Tech Stack
+
+| Component | Location |
+| --- | --- |
+| Theme & design tokens | `lib/core/app_theme.dart` |
+| Date helpers | `lib/core/date_utils.dart` |
+| SQLite schema & migrations | `lib/helpers/database_helper.dart` |
+| Password hashing | `lib/services/password_hasher.dart` |
+| Auth service | `lib/services/auth_service.dart` |
+| Task repository | `lib/services/task_repository.dart` |
+| App shell | `lib/home_screen.dart` |
+| Navigation Tabs | `lib/screens/home_page.dart`, `lib/screens/tasks_page.dart`, `lib/calendar_screen.dart`, `lib/screens/profile_page.dart` |
+
+## Getting Started
 
 ```sh
 flutter pub get
 flutter run
 ```
 
-## Test
+## Testing
 
 ```sh
 flutter test        # unit + widget tests
-flutter analyze
+flutter analyze     # static analysis
 ```
 
-The widget tests (`test/app_widget_test.dart`) cover the calendar grid (weekday headers, live task data), the All/Pending/Done/Overdue filter chips, and swipe-to-delete with UNDO restoring the exact original row id. They run the real SQLite schema on the host through `sqflite_common_ffi`.
+The widget tests (`test/app_widget_test.dart`) cover the calendar grid, the All/Pending/Done/Overdue filter chips, and swipe-to-delete with UNDO restoring the exact original row id. They run the real SQLite schema on the host through `sqflite_common_ffi`.

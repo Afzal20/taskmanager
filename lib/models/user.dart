@@ -6,6 +6,9 @@ class User {
   final String avatar;
   final String createdAt;
 
+  /// Local file path of the user's profile photo; empty when unset.
+  final String avatarPath;
+
   User({
     this.id,
     required this.name,
@@ -13,6 +16,7 @@ class User {
     required this.password,
     required this.avatar,
     required this.createdAt,
+    this.avatarPath = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -23,6 +27,7 @@ class User {
       'password': password,
       'avatar': avatar,
       'createdAt': createdAt,
+      'avatarPath': avatarPath,
     };
   }
 
@@ -34,6 +39,7 @@ class User {
       password: map['password'] as String,
       avatar: map['avatar'] as String,
       createdAt: map['createdAt'] as String,
+      avatarPath: (map['avatarPath'] as String?) ?? '',
     );
   }
 }

@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../core/date_utils.dart' as du;
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/avatar_storage.dart';
 import '../screens/auth/login_screen.dart';
 import '../widgets/common.dart';
 
@@ -108,6 +111,7 @@ class ProfilePageState extends State<ProfilePage>
                     password: user.password,
                     avatar: avatar,
                     createdAt: user.createdAt,
+                    avatarPath: user.avatarPath,
                   );
                   // Persist via auth service helper.
                   await AuthService.instance.updateProfile(updated);
@@ -121,6 +125,83 @@ class ProfilePageState extends State<ProfilePage>
     );
 
     if (saved == true) reload();
+  }
+
+  /// Lets the user choose a profile photo from the gallery or camera.
+  Future<void> _pickAvatar() async {
+    final source = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_outlined,
+                  color: AppColors.primary),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(ctx).pop(false),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(ctx).pop(true),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final oldPath = _user?.avatarPath;
+    final path = await AvatarStorage.pickAndStore(fromCamera: source);
+    if (path == null || !mounted) return;
+
+    await AuthService.instance.setAvatarPath(path);
+    AvatarStorage.deleteStored(oldPath);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Profile photo updated.'),
+      backgroundColor: AppColors.green,
+    ));
+    reload();
+  }
+
+  Widget _avatarWidget(User? user, {double size = 58, double fontSize = 28}) {
+    final path = user?.avatarPath ?? '';
+    Widget content;
+    if (path.isNotEmpty && File(path).existsSync()) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.3),
+        child: Image.file(
+          File(path),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        ),
+      );
+    } else {
+      content = Text(
+        _loading ? '…' : (user?.avatar ?? '🙂'),
+        style: TextStyle(fontSize: fontSize),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(size * 0.3),
+      ),
+      child: Center(child: content),
+    );
   }
 
   Future<void> _changePassword() async {
@@ -263,18 +344,25 @@ class ProfilePageState extends State<ProfilePage>
           ),
           child: Row(
             children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: Center(
-                  child: Text(
-                    _loading ? '…' : (user?.avatar ?? '🙂'),
-                    style: const TextStyle(fontSize: 28),
-                  ),
+              GestureDetector(
+                onTap: _pickAvatar,
+                child: Stack(
+                  children: [
+                    _avatarWidget(user),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.photo_camera_rounded,
+                            size: 11, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 14),

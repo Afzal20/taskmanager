@@ -142,6 +142,7 @@ class AuthService {
         password: hashedPassword,
         avatar: user.avatar,
         createdAt: user.createdAt,
+        avatarPath: user.avatarPath,
       ),
     );
     await _startSession(user.id!, user.email);
@@ -150,6 +151,23 @@ class AuthService {
 
   Future<void> updateProfile(User updated) async {
     await DatabaseHelper.instance.updateUser(updated);
+  }
+
+  /// Persists the profile photo path for the signed-in user.
+  Future<void> setAvatarPath(String path) async {
+    final user = await currentUser();
+    if (user == null) return;
+    await DatabaseHelper.instance.updateUser(
+      User(
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        avatar: user.avatar,
+        createdAt: user.createdAt,
+        avatarPath: path,
+      ),
+    );
   }
 
   Future<AuthResult> changePassword({
@@ -173,6 +191,7 @@ class AuthService {
         password: hashedPassword,
         avatar: user.avatar,
         createdAt: user.createdAt,
+        avatarPath: user.avatarPath,
       ),
     );
     return const AuthResult.ok();

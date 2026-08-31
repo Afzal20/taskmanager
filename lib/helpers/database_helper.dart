@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import '../models/memory.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 
@@ -23,7 +24,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -37,7 +38,8 @@ CREATE TABLE users (
   email TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
   avatar TEXT NOT NULL,
-  createdAt TEXT NOT NULL
+  createdAt TEXT NOT NULL,
+  avatarPath TEXT NOT NULL DEFAULT ''
 )
 ''');
     await db.execute('''
@@ -51,6 +53,15 @@ CREATE TABLE tasks (
   createTime TEXT NOT NULL,
   dueDate TEXT NOT NULL,
   isDone INTEGER NOT NULL
+)
+''');
+    await db.execute('''
+CREATE TABLE memories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  date TEXT NOT NULL
 )
 ''');
   }
@@ -81,6 +92,21 @@ CREATE TABLE IF NOT EXISTS users (
       );
     }
     // oldVersion < 3: no DDL needed; hashing is enforced at the service layer.
+    if (oldVersion < 4) {
+      // Profile photos (local file paths) and diary-style memories.
+      await db.execute(
+        "ALTER TABLE users ADD COLUMN avatarPath TEXT NOT NULL DEFAULT ''",
+      );
+      await db.execute('''
+CREATE TABLE IF NOT EXISTS memories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  date TEXT NOT NULL
+)
+''');
+    }
   }
 
   /// Clears the cached database handle so a fresh one is opened (used by tests).
@@ -174,6 +200,36 @@ CREATE TABLE IF NOT EXISTS users (
       'tasks',
       where: 'id = ? AND userId = ?',
       whereArgs: [taskId, userId],
+    );
+  }
+
+  // ---- Memories (always scoped by userId — authorization boundary) ----
+
+  Future<int> insertMemory(Memory memory) async {
+    final db = await instance.database;
+    return db.insert('memories', memory.toMap());
+  }
+
+  Future<List<Memory>> getMemoriesForUser(int userId, {String? dayPrefix}) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'memories',
+      where: dayPrefix == null
+          ? 'userId = ?'
+          : 'userId = ? AND date LIKE ?',
+      whereArgs:
+          dayPrefix == null ? [userId] : [userId, '$dayPrefix%'],
+      orderBy: 'id DESC',
+    );
+    return maps.map(Memory.fromMap).toList();
+  }
+
+  Future<int> deleteMemory(int userId, int memoryId) async {
+    final db = await instance.database;
+    return db.delete(
+      'memories',
+      where: 'id = ? AND userId = ?',
+      whereArgs: [memoryId, userId],
     );
   }
 }

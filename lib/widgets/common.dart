@@ -200,35 +200,41 @@ class EmptyState extends StatelessWidget {  final IconData icon;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceHigh,
-                borderRadius: BorderRadius.circular(24),
+        // Scroll instead of overflowing when the host area is too short
+        // (e.g. the calendar's fixed-height empty-day slot).
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(icon, size: 32, color: AppColors.textTertiary),
               ),
-              child: Icon(icon, size: 32, color: AppColors.textTertiary),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 13.5, color: AppColors.textTertiary, height: 1.5),
-            ),
-          ],
+              const SizedBox(height: 20),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 13.5,
+                    color: AppColors.textTertiary,
+                    height: 1.5),
+              ),
+            ],
+          ),
         ),
       ),
     );

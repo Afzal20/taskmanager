@@ -19,6 +19,12 @@ dependencies:
   shared_preferences: ^2.3.0 # for auth session storage
   crypto: ^3.0.7 # PBKDF2 password hashing
 
+  flutter_local_notifications: ^19.0.1 # local due-date reminders (no push)
+  flutter_timezone: ^5.1.0 # device timezone name for scheduling
+  timezone: ^0.10.0 # TZDateTime math for reminders
+  image_picker: ^1.1.2 # pick profile photo from gallery/camera
+  path_provider: ^2.1.5 # app-private storage for profile photos
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

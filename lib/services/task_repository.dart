@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
+import '../core/date_utils.dart' as du;
 import 'auth_service.dart';
 import '../helpers/database_helper.dart';
 import '../models/task.dart';
+import 'task_changes.dart';
 
 /// All task access goes through here so every query is scoped to the
-/// signed-in user (authorization boundary).
+/// signed-in user (authorization boundary). Every mutation notifies
+/// [TaskChanges] so all live tabs reload their lists.
 class TaskRepository {
   static int get _uid => AuthService.instance.userId;
 
@@ -14,8 +17,7 @@ class TaskRepository {
       DatabaseHelper.instance.getTasksForUser(_uid);
 
   static Future<List<Task>> fetchForDay(DateTime day) async {
-    final key =
-        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+    final key = du.dayKey(day);
     return DatabaseHelper.instance.getTasksForUser(_uid, dayPrefix: key);
   }
 
@@ -32,14 +34,18 @@ class TaskRepository {
         isDone: task.isDone,
       ),
     );
+    TaskChanges.instance.notify();
   }
 
-  static Future<void> update(Task task) =>
-      DatabaseHelper.instance.updateTask(task);
+  static Future<void> update(Task task) async {
+    await DatabaseHelper.instance.updateTask(task);
+    TaskChanges.instance.notify();
+  }
 
   static Future<void> setDone(Task task, bool done) async {
     final updated = task.copyWith(isDone: done ? 1 : 0);
     await DatabaseHelper.instance.toggleTaskDone(_uid, task.id!, updated.isDone);
+    TaskChanges.instance.notify();
   }
 
   /// Deletes the task and offers an undo snackbar. The undo re-inserts the
@@ -63,10 +69,12 @@ class TaskRepository {
           onPressed: () async {
             // Re-insert preserving the original id.
             await DatabaseHelper.instance.insertTask(task);
+            TaskChanges.instance.notify();
             onChanged();
           },
         ),
       ),
     );
+    TaskChanges.instance.notify();
   }
 }

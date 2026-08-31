@@ -24,6 +24,30 @@ class AppColors {
     Color(0xFFEF4444),
     Color(0xFFEC4899),
   ];
+
+  // Calendar weekday tints (light variants that read well on the dark theme).
+  static const thursdayBlue = Color(0xFF60A5FA);
+  static const fridayRed = Color(0xFFF87171);
+  static const weekendGreen = Color(0xFF4ADE80);
+
+  /// Tint for a calendar weekday column; DateTime.weekday:
+  /// Mon=1..Sun=7. Thursday is blue, Friday light red, Sat/Sun light green.
+  static Color? calendarDayColor(int weekday) {
+    switch (weekday) {
+      case DateTime.thursday:
+        return thursdayBlue;
+      case DateTime.friday:
+        return fridayRed;
+      case DateTime.saturday:
+      case DateTime.sunday:
+        return weekendGreen;
+      default:
+        return null;
+    }
+  }
+
+  /// Accent used by memory cards on the calendar.
+  static const memoryAccent = Color(0xFFFBBF24);
 }
 
 class AppTheme {

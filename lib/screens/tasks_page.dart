@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../models/task.dart';
+import '../services/task_changes.dart';
 import '../services/task_repository.dart';
 import '../widgets/common.dart';
 import '../widgets/task_card.dart';
 
-enum _Filter { all, pending, done, overdue }
+/// Filters shared with the home screen so its stat tiles can deep-link into
+/// this list: total->all, pending->pending, missed->missed, done->done.
+enum TaskFilter { all, pending, done, missed }
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -19,16 +24,30 @@ class TasksPageState extends State<TasksPage>
     with AutomaticKeepAliveClientMixin {
   List<Task> _tasks = [];
   bool _loading = true;
-  _Filter _filter = _Filter.all;
+  TaskFilter _filter = TaskFilter.all;
   String _query = '';
+  StreamSubscription<void>? _changesSub;
 
   @override
   bool get wantKeepAlive => true;
+
+  /// Applies a filter (e.g. from a home stat tile) and scrolls to top.
+  void setFilter(TaskFilter filter) {
+    setState(() => _filter = filter);
+  }
 
   @override
   void initState() {
     super.initState();
     reload();
+    // Other tabs can mutate tasks while this one is alive in the shell.
+    _changesSub = TaskChanges.instance.listen(() => reload());
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
   }
 
   Future<void> reload() async {
@@ -43,16 +62,16 @@ class TasksPageState extends State<TasksPage>
   List<Task> get _filtered {
     Iterable<Task> result = _tasks;
     switch (_filter) {
-      case _Filter.pending:
+      case TaskFilter.pending:
         result = result.where((t) => !t.done);
         break;
-      case _Filter.done:
+      case TaskFilter.done:
         result = result.where((t) => t.done);
         break;
-      case _Filter.overdue:
+      case TaskFilter.missed:
         result = result.where((t) => t.isOverdue);
         break;
-      case _Filter.all:
+      case TaskFilter.all:
         break;
     }
     final q = _query.trim().toLowerCase();
@@ -99,10 +118,10 @@ class TasksPageState extends State<TasksPage>
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _filterChip(_Filter.all, 'All'),
-                  _filterChip(_Filter.pending, 'Pending'),
-                  _filterChip(_Filter.done, 'Done'),
-                  _filterChip(_Filter.overdue, 'Overdue'),
+                  _filterChip(TaskFilter.all, 'All'),
+                  _filterChip(TaskFilter.pending, 'Pending'),
+                  _filterChip(TaskFilter.done, 'Done'),
+                  _filterChip(TaskFilter.missed, 'Missed'),
                 ],
               ),
             ],
@@ -164,7 +183,7 @@ class TasksPageState extends State<TasksPage>
     );
   }
 
-  Widget _filterChip(_Filter value, String label) {
+  Widget _filterChip(TaskFilter value, String label) {
     final selected = _filter == value;
     return GestureDetector(
       onTap: () => setState(() => _filter = value),

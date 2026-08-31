@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
@@ -5,18 +8,25 @@ import '../core/date_utils.dart' as du;
 import '../models/task.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/task_changes.dart';
 import '../services/task_repository.dart';
 import '../widgets/common.dart';
 import '../widgets/task_card.dart';
+import 'tasks_page.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onOpenProfile;
   final VoidCallback onOpenTasks;
 
+  /// Called when a stat tile is tapped so the shell can show the Tasks tab
+  /// pre-filtered to that bucket (total/pending/missed/done).
+  final ValueChanged<TaskFilter>? onOpenTasksWithFilter;
+
   const HomePage({
     super.key,
     required this.onOpenProfile,
     required this.onOpenTasks,
+    this.onOpenTasksWithFilter,
   });
 
   @override
@@ -27,6 +37,7 @@ class HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
   List<Task> _tasks = [];
   User? _user;
   bool _loading = true;
+  StreamSubscription<void>? _changesSub;
 
   @override
   bool get wantKeepAlive => true;
@@ -35,6 +46,14 @@ class HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
   void initState() {
     super.initState();
     reload();
+    // Other tabs can mutate tasks while this one is alive in the shell.
+    _changesSub = TaskChanges.instance.listen(() => reload());
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
   }
 
   Future<void> reload() async {
@@ -70,12 +89,13 @@ class HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
   Widget build(BuildContext context) {
     super.build(context);
     final width = MediaQuery.of(context).size.width;
-    final compact = width < 360;
 
     final total = _tasks.length;
     final done = _tasks.where((t) => t.done).length;
     final pending = total - done;
+    final missed = _tasks.where((t) => t.isOverdue).length;
     final progress = total == 0 ? 0.0 : done / total;
+    final tileCompact = width < 420;
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -99,8 +119,22 @@ class HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child:
-                      Center(child: Text(_user?.avatar ?? '🙂', style: const TextStyle(fontSize: 22))),
+                  child: Center(
+                    child: (_user?.avatarPath.isNotEmpty ?? false) &&
+                            File(_user!.avatarPath).existsSync()
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(13),
+                            child: Image.file(
+                              File(_user!.avatarPath),
+                              width: 46,
+                              height: 46,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                            ),
+                          )
+                        : Text(_user?.avatar ?? '🙂',
+                            style: const TextStyle(fontSize: 22)),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -194,7 +228,7 @@ class HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
 
           const SizedBox(height: 16),
 
-          // Stat tiles
+          // Stat tiles — tap to open the Tasks tab pre-filtered.
           Row(
             children: [
               Expanded(
@@ -203,23 +237,39 @@ class HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
                       value: total,
                       icon: Icons.checklist_rounded,
                       color: AppColors.primary,
-                      compact: compact)),
-              const SizedBox(width: 10),
+                      compact: tileCompact,
+                      onTap: () => widget.onOpenTasksWithFilter
+                          ?.call(TaskFilter.all))),
+              const SizedBox(width: 8),
               Expanded(
                   child: _StatTile(
                       label: 'Pending',
                       value: pending,
                       icon: Icons.pending_outlined,
                       color: AppColors.amber,
-                      compact: compact)),
-              const SizedBox(width: 10),
+                      compact: tileCompact,
+                      onTap: () => widget.onOpenTasksWithFilter
+                          ?.call(TaskFilter.pending))),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: _StatTile(
+                      label: 'Missed',
+                      value: missed,
+                      icon: Icons.history_rounded,
+                      color: AppColors.red,
+                      compact: tileCompact,
+                      onTap: () => widget.onOpenTasksWithFilter
+                          ?.call(TaskFilter.missed))),
+              const SizedBox(width: 8),
               Expanded(
                   child: _StatTile(
                       label: 'Done',
                       value: done,
                       icon: Icons.task_alt_rounded,
                       color: AppColors.green,
-                      compact: compact)),
+                      compact: tileCompact,
+                      onTap: () => widget.onOpenTasksWithFilter
+                          ?.call(TaskFilter.done))),
             ],
           ),
 
@@ -300,6 +350,7 @@ class _StatTile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final bool compact;
+  final VoidCallback? onTap;
 
   const _StatTile({
     required this.label,
@@ -307,44 +358,53 @@ class _StatTile extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.compact,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-          vertical: compact ? 12 : 14, horizontal: compact ? 8 : 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: compact ? 18 : 21, color: color),
-          const SizedBox(height: 7),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              '$value',
-              style: TextStyle(
-                fontSize: compact ? 19 : 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+              vertical: compact ? 12 : 14, horizontal: compact ? 4 : 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: compact ? 18 : 21, color: color),
+              const SizedBox(height: 7),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '$value',
+                  style: TextStyle(
+                    fontSize: compact ? 19 : 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: compact ? 11 : 12,
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            style: TextStyle(
-              fontSize: compact ? 11 : 12,
-              color: AppColors.textTertiary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

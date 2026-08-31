@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
-import '../helpers/database_helper.dart';
 import '../models/task.dart';
 import '../services/auth_service.dart';
+import '../services/task_repository.dart';
 import '../widgets/common.dart';
 import '../core/date_utils.dart' as du;
 
 class AddTaskScreen extends StatefulWidget {
   final Task? task;
 
-  const AddTaskScreen({super.key, this.task});
+  /// Day the form starts from when creating a new task (e.g. the day currently
+  /// selected in the calendar). Ignored when editing an existing task.
+  final DateTime? initialDate;
+
+  const AddTaskScreen({super.key, this.task, this.initialDate});
 
   @override
   State<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -39,6 +43,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     if (_selectedColor == -1) _selectedColor = 0;
     if (t != null) {
       _selectedDate = du.stripTime(t.dueDateTime);
+    } else if (widget.initialDate != null) {
+      _selectedDate = du.stripTime(widget.initialDate!);
     }
   }
 
@@ -50,10 +56,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Future<void> _pickDate() async {
+    final now = du.stripTime(DateTime.now());
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      // New tasks must be due today or later; editing an existing task keeps
+      // its original (possibly past) date selectable.
+      firstDate: _isEditing ? now.subtract(const Duration(days: 365)) : now,
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
@@ -81,6 +90,19 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
     final userId = AuthService.instance.userId;
 
+    // Tasks can never be scheduled in the past — use memories for that.
+    final today = du.stripTime(DateTime.now());
+    if (!_isEditing && _selectedDate.isBefore(today)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tasks can\'t be added to past days. '
+              'Use a memory instead.'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
+
     final task = Task(
       id: widget.task?.id,
       userId: userId,
@@ -95,9 +117,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
 
     if (_isEditing) {
-      await DatabaseHelper.instance.updateTask(task);
+      await TaskRepository.update(task);
     } else {
-      await DatabaseHelper.instance.insertTask(task);
+      await TaskRepository.add(task);
     }
 
     if (!mounted) return;
@@ -304,7 +326,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     final label = switch (offsetDays) {
       0 => 'Today',
       1 => 'Tomorrow',
-      2 => 'In 3 days',
+      2 => 'In 2 days',
       7 => 'In 1 week',
       _ => '',
     };

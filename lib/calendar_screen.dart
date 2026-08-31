@@ -1,10 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../core/date_utils.dart' as du;
+import '../models/memory.dart';
 import '../models/task.dart';
+import '../services/memory_repository.dart';
+import '../services/task_changes.dart';
 import '../services/task_repository.dart';
 import '../widgets/common.dart';
+import '../widgets/memory_card.dart';
 import '../widgets/task_card.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -19,7 +25,13 @@ class CalendarPageState extends State<CalendarPage>
   late DateTime _visibleMonth; // first day of month
   DateTime _selectedDay = du.stripTime(DateTime.now());
   Map<DateTime, List<Task>> _byDay = {};
+  Map<DateTime, List<Memory>> _memoriesByDay = {};
   bool _loading = true;
+  StreamSubscription<void>? _changesSub;
+
+  /// Day currently highlighted in the grid; used as the default due date when
+  /// the + button opens a new task from this tab.
+  DateTime get selectedDay => _selectedDay;
 
   @override
   bool get wantKeepAlive => true;
@@ -30,18 +42,33 @@ class CalendarPageState extends State<CalendarPage>
     final now = DateTime.now();
     _visibleMonth = DateTime(now.year, now.month, 1);
     reload();
+    // Other tabs can mutate tasks while this one is alive in the shell.
+    _changesSub = TaskChanges.instance.listen(() => reload());
+  }
+
+  @override
+  void dispose() {
+    _changesSub?.cancel();
+    super.dispose();
   }
 
   Future<void> reload() async {
     final tasks = await TaskRepository.fetchAll();
+    final memories = await MemoryRepository.fetchAll();
     if (!mounted) return;
     final map = <DateTime, List<Task>>{};
     for (final t in tasks) {
       final key = du.stripTime(t.dueDateTime);
       map.putIfAbsent(key, () => []).add(t);
     }
+    final memoryMap = <DateTime, List<Memory>>{};
+    for (final m in memories) {
+      final key = DateTime.tryParse(m.date) ?? DateTime.now();
+      memoryMap.putIfAbsent(du.stripTime(key), () => []).add(m);
+    }
     setState(() {
       _byDay = map;
+      _memoriesByDay = memoryMap;
       _loading = false;
     });
   }
@@ -53,6 +80,9 @@ class CalendarPageState extends State<CalendarPage>
               : a.isDone == 1
                   ? 1
                   : -1);
+
+  List<Memory> get _selectedMemories =>
+      _memoriesByDay[du.stripTime(_selectedDay)] ?? [];
 
   void _changeMonth(int dir) {
     setState(() => _visibleMonth = DateTime(
@@ -135,23 +165,25 @@ class CalendarPageState extends State<CalendarPage>
           ),
         ),
 
-        // Weekday header
+        // Weekday header (colourful per-day tints).
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
-            children: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
-                .map((d) => Expanded(
-                      child: Center(
-                        child: Text(
-                          d,
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textTertiary),
-                        ),
-                      ),
-                    ))
-                .toList(),
+            children: List.generate(7, (i) {
+              final weekday = i + 1; // Mon=1..Sun=7
+              final tint = AppColors.calendarDayColor(weekday);
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'][i],
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: tint ?? AppColors.textTertiary),
+                  ),
+                ),
+              );
+            }),
           ),
         ),
         const SizedBox(height: 6),
@@ -177,6 +209,7 @@ class CalendarPageState extends State<CalendarPage>
               final isToday = du.isSameDay(date, today);
               final isSelected = du.isSameDay(date, _selectedDay);
               final count = _byDay[date]?.length ?? 0;
+              final memoryCount = _memoriesByDay[date]?.length ?? 0;
               final hasOverduePending =
                   (_byDay[date] ?? []).any((t) => !t.done && date.isBefore(today));
               return _dayCell(
@@ -184,6 +217,7 @@ class CalendarPageState extends State<CalendarPage>
                 isToday: isToday,
                 isSelected: isSelected,
                 taskCount: count,
+                memoryCount: memoryCount,
                 urgent: hasOverduePending,
                 onTap: () => setState(() => _selectedDay = date),
               );
@@ -216,27 +250,38 @@ class CalendarPageState extends State<CalendarPage>
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary),
                           ),
-                          const Spacer(),
-                          Text(
-                            '${_selectedTasks.length} ${_selectedTasks.length == 1 ? 'task' : 'tasks'}',
-                            style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textTertiary),
+                          Expanded(
+                            child: Text(
+                              '${_selectedTasks.length} ${_selectedTasks.length == 1 ? 'task' : 'tasks'}'
+                              '${_selectedMemories.isEmpty ? '' : ' • ${_selectedMemories.length} ${_selectedMemories.length == 1 ? 'memory' : 'memories'}'}',
+                              textAlign: TextAlign.end,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textTertiary),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      if (_selectedTasks.isEmpty)
+                      if (_selectedTasks.isEmpty && _selectedMemories.isEmpty)
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.28,
-                          child: const EmptyState(
-                            icon: Icons.event_available_outlined,
-                            title: 'Nothing scheduled',
-                            message: 'No tasks for this day.',
+                          child: EmptyState(
+                            icon: _selectedDay.isBefore(du.stripTime(DateTime.now()))
+                                ? Icons.auto_stories_outlined
+                                : Icons.event_available_outlined,
+                            title: _selectedDay.isBefore(du.stripTime(DateTime.now()))
+                                ? 'Nothing recorded'
+                                : 'Nothing scheduled',
+                            message:
+                                _selectedDay.isBefore(du.stripTime(DateTime.now()))
+                                    ? 'No tasks or memories for this day.'
+                                    : 'No tasks for this day.',
                           ),
                         )
-                      else
+                      else ...[
                         ..._selectedTasks.map((task) => Padding(
                               padding: const EdgeInsets.only(bottom: 10),
                               child: Dismissible(
@@ -256,6 +301,20 @@ class CalendarPageState extends State<CalendarPage>
                                 ),
                               ),
                             )),
+                        ..._selectedMemories.map((memory) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Dismissible(
+                                key: ValueKey('cal-mem-${memory.id}'),
+                                direction: DismissDirection.endToStart,
+                                background: const SwipeDeleteBackground(),
+                                onDismissed: (_) async {
+                                  await MemoryRepository.delete(memory.id!);
+                                  reload();
+                                },
+                                child: MemoryCard(memory: memory),
+                              ),
+                            )),
+                      ],
                     ],
                   ),
                 ),
@@ -287,9 +346,11 @@ class CalendarPageState extends State<CalendarPage>
     required bool isToday,
     required bool isSelected,
     required int taskCount,
+    required int memoryCount,
     required bool urgent,
     required VoidCallback onTap,
   }) {
+    final weekdayTint = AppColors.calendarDayColor(date.weekday);
     Color bg = Colors.transparent;
     Border? border;
 
@@ -298,8 +359,11 @@ class CalendarPageState extends State<CalendarPage>
     } else if (isToday) {
       bg = AppColors.primary.withValues(alpha: 0.12);
       border = Border.all(color: AppColors.primary.withValues(alpha: 0.55));
-    } else if (taskCount > 0) {
+    } else if (taskCount > 0 || memoryCount > 0) {
+      // Days with content keep a neutral surface so dots stay readable.
       bg = AppColors.surfaceHigh;
+    } else if (weekdayTint != null) {
+      bg = weekdayTint.withValues(alpha: 0.10);
     }
 
     return GestureDetector(
@@ -323,17 +387,20 @@ class CalendarPageState extends State<CalendarPage>
                     ? Colors.white
                     : isToday
                         ? AppColors.primary
-                        : taskCount > 0
+                        : taskCount > 0 || memoryCount > 0
                             ? AppColors.textPrimary
-                            : AppColors.textTertiary,
+                            : weekdayTint?.withValues(alpha: 0.85) ??
+                                AppColors.textTertiary,
               ),
             ),
             const SizedBox(height: 3),
-            if (taskCount > 0)
+            if (taskCount > 0 || memoryCount > 0)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  for (var i = 0; i < taskCount.clamp(1, 3); i++)
+                  for (var i = 0;
+                      i < (taskCount + memoryCount).clamp(1, 3);
+                      i++)
                     Container(
                       width: 4,
                       height: 4,
@@ -342,9 +409,11 @@ class CalendarPageState extends State<CalendarPage>
                         shape: BoxShape.circle,
                         color: isSelected
                             ? Colors.white
-                            : urgent
-                                ? AppColors.red
-                                : AppColors.primary,
+                            : i == 0 && taskCount == 0
+                                ? AppColors.memoryAccent
+                                : urgent
+                                    ? AppColors.red
+                                    : AppColors.primary,
                       ),
                     ),
                 ],
